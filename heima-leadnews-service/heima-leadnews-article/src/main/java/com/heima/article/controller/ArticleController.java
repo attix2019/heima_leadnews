@@ -21,4 +21,16 @@ public class ArticleController {
         return articleService.loadArticlesByCriterias(articleHomeDto,
                 ArticleLoadingModeConstant.LOAD_MORE);
     }
+
+    @PostMapping("/loadmore")
+    public ResponseResult loadMoreArticle(@RequestBody ArticleHomeDto articleHomeDto){
+        return articleService.loadArticlesByCriterias(articleHomeDto,
+                ArticleLoadingModeConstant.LOAD_MORE);
+    }
+
+    @PostMapping("/loadnew")
+    public ResponseResult loadEarlierArticle(@RequestBody ArticleHomeDto articleHomeDto){
+        return articleService.loadArticlesByCriterias(articleHomeDto,
+                ArticleLoadingModeConstant.LOAD_NEW);
+    }
 }
