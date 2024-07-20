@@ -1,5 +1,7 @@
 package com.heima.wemedia.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.heima.file.service.FileStorageService;
 import com.heima.model.common.dtos.ResponseResult;
@@ -15,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,6 +26,9 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
 
     @Autowired
     FileStorageService fileStorageService;
+
+    @Autowired
+    WmMaterialMapper wmMaterialMapper;
 
     @Override
     public ResponseResult uploadPicture(MultipartFile multipartFile) {
@@ -57,5 +63,11 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
         //4.返回结果
 
         return ResponseResult.okResult(wmMaterial);
+    }
+
+    @Override
+    public ResponseResult getMaterialList(Short isBookmarked) {
+        List<WmMaterial> materials = wmMaterialMapper.selectList(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getIsCollection, isBookmarked));
+        return ResponseResult.okResult(materials);
     }
 }
