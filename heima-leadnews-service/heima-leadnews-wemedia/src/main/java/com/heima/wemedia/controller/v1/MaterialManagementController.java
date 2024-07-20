@@ -24,7 +24,7 @@ public class MaterialManagementController {
 
     @PostMapping("/list")
     public ResponseResult getMaterialList(@RequestBody  WmMaterialDto wmMaterialDto){
-        return wmMaterialService.getMaterialList(wmMaterialDto.getIsCollection());
+        return wmMaterialService.getMaterialList(wmMaterialDto);
     }
 
 }
