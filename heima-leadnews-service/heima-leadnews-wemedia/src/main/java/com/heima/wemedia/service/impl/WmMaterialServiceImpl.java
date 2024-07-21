@@ -12,7 +12,9 @@ import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.WmMaterialDto;
 import com.heima.model.wemedia.pojos.WmMaterial;
+import com.heima.model.wemedia.pojos.WmNewsMaterial;
 import com.heima.wemedia.mapper.WmMaterialMapper;
+import com.heima.wemedia.mapper.WmNewsMaterialMapper;
 import com.heima.wemedia.service.WmMaterialService;
 import com.heima.wemedia.util.WmThreadLocalUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,9 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
 
     @Autowired
     WmMaterialMapper wmMaterialMapper;
+
+    @Autowired
+    WmNewsMaterialMapper wmNewsMaterialMapper;
 
     @Override
     public ResponseResult uploadPicture(MultipartFile multipartFile) {
@@ -96,8 +101,14 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
 
     @Override
     public ResponseResult deleteMaterial(Integer id) {
-        int count = wmMaterialMapper.delete(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
-        if(count == 0){
+        // 查询素材是否正在被引用
+        int count = wmNewsMaterialMapper.selectCount(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getMaterialId,
+                id));
+        if(count > 0){
+            return ResponseResult.errorResult(AppHttpCodeEnum.MATERIAL_STILL_REFERENCED);
+        }
+        int affected = wmMaterialMapper.delete(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
+        if(affected == 0){
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
         }
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
