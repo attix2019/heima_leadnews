@@ -23,10 +23,10 @@ public enum AppHttpCodeEnum {
     DATA_EXIST(1000,"数据已经存在"),
     AP_USER_DATA_NOT_EXIST(1001,"ApUser数据不存在"),
     DATA_NOT_EXIST(1002,"数据不存在"),
+    MATERIASL_REFERENCE_FAIL(1003,"素材引用失效"),
     // 数据错误 3000~3500
     NO_OPERATOR_AUTH(3000,"无权限操作"),
     NEED_ADMIND(3001,"需要管理员权限");
-
     int code;
     String errorMessage;
 
