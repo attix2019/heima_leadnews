@@ -4,12 +4,15 @@ import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.WmMaterialDto;
 import com.heima.wemedia.service.WmMaterialService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/material")
+@Api(tags = "自媒体作者端素材管理相关接口")
 public class MaterialManagementController {
 
     @Autowired
@@ -26,6 +29,7 @@ public class MaterialManagementController {
     }
 
     @GetMapping("/del_picture/{id}")
+    @ApiOperation("删除素材")
     public ResponseResult deleteMaterial(@PathVariable Integer id){
         return wmMaterialService.deleteMaterial(id);
     }
