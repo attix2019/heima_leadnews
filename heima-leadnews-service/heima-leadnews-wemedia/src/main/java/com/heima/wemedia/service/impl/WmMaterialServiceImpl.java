@@ -101,16 +101,24 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
 
     @Override
     public ResponseResult deleteMaterial(Integer id) {
+        WmMaterial wmMaterial = getOne(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
+        if(wmMaterial == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.MATERIAL_STILL_REFERENCED);
+        }
+        String path = wmMaterial.getUrl();
+
         // 查询素材是否正在被引用
         int count = wmNewsMaterialMapper.selectCount(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getMaterialId,
                 id));
         if(count > 0){
             return ResponseResult.errorResult(AppHttpCodeEnum.MATERIAL_STILL_REFERENCED);
         }
+
         int affected = wmMaterialMapper.delete(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
         if(affected == 0){
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
         }
+        fileStorageService.delete(path);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
