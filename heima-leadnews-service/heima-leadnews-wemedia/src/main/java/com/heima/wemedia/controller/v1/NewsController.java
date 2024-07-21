@@ -27,8 +27,14 @@ public class NewsController {
 
     @GetMapping("/one/{id}")
     @ApiOperation("查看文章详情")
-    public ResponseResult getArticleDetail(@PathVariable Integer id){
-        return wmNewsService.getArticleDetail(id);
+    public ResponseResult getNewsDetail(@PathVariable Integer id){
+        return wmNewsService.getNewsDetail(id);
+    }
+
+    @GetMapping("/del_news/{id}")
+    @ApiOperation("查看文章详情")
+    public ResponseResult deleteNews(@PathVariable Integer id){
+        return wmNewsService.deleteNews(id);
     }
 
 }

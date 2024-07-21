@@ -124,12 +124,31 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
     }
 
     @Override
-    public ResponseResult getArticleDetail(Integer id) {
+    public ResponseResult getNewsDetail(Integer id) {
         WmNews wmNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, id));
         if(wmNews == null){
             return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
         }
         return ResponseResult.okResult(wmNews);
+    }
+
+    @Override
+    @Transactional
+    public ResponseResult deleteNews(Integer id) {
+        if(id == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "文章id不可缺少");
+        }
+        WmNews wmNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, id));
+        if(wmNews == null) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST, "文章不存在");
+        }
+        if(wmNews.getStatus().equals(WmNews.Status.PUBLISHED)){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "文章已发布，不能删除");
+        }
+        wmNewsMapper.deleteById(wmNews.getId());
+        // delete from wm_news_material where news_id = ?
+        wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId, id));
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
 
