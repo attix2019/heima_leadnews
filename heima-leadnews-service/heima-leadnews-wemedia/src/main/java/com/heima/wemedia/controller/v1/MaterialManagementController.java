@@ -34,4 +34,16 @@ public class MaterialManagementController {
         return wmMaterialService.deleteMaterial(id);
     }
 
+    @GetMapping("/collect/{id}")
+    @ApiOperation("取消收藏")
+    public ResponseResult bookmarkMaterial(@PathVariable Integer id){
+        return wmMaterialService.bookmarkMaterial(id);
+    }
+
+    @GetMapping("/cancel_collect/{id}")
+    @ApiOperation("收藏")
+    public ResponseResult unBookmarkMaterial(@PathVariable Integer id){
+        return wmMaterialService.unBookmarkMaterial(id);
+    }
+
 }

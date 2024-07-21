@@ -13,4 +13,8 @@ public interface WmMaterialService extends IService<WmMaterial> {
     ResponseResult getMaterialList(WmMaterialDto wmMaterialDto);
 
     ResponseResult deleteMaterial(Integer id);
+
+    ResponseResult bookmarkMaterial(Integer id);
+
+    ResponseResult unBookmarkMaterial(Integer id);
 }

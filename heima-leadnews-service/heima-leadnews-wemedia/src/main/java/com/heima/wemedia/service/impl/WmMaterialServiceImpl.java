@@ -22,7 +22,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -101,6 +100,28 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
         if(count == 0){
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
         }
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult bookmarkMaterial(Integer id) {
+        WmMaterial wmMaterial = getOne(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
+        if(wmMaterial == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        wmMaterial.setIsCollection( (short)1);
+        updateById(wmMaterial);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult unBookmarkMaterial(Integer id) {
+        WmMaterial wmMaterial = getOne(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
+        if(wmMaterial == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        wmMaterial.setIsCollection( (short)0);
+        updateById(wmMaterial);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }
