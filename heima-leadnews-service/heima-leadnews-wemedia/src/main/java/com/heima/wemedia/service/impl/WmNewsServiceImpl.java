@@ -123,6 +123,15 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
+    @Override
+    public ResponseResult getArticleDetail(Integer id) {
+        WmNews wmNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId, id));
+        if(wmNews == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST);
+        }
+        return ResponseResult.okResult(wmNews);
+    }
+
 
     /**
      * 处理文章内容图片与素材的关系
