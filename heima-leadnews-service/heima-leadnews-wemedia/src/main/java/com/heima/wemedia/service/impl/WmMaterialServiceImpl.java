@@ -94,4 +94,13 @@ public class WmMaterialServiceImpl extends ServiceImpl<WmMaterialMapper, WmMater
         responseResult.setData(page.getRecords());
         return responseResult;
     }
+
+    @Override
+    public ResponseResult deleteMaterial(Integer id) {
+        int count = wmMaterialMapper.delete(Wrappers.<WmMaterial>lambdaQuery().eq(WmMaterial::getId, id));
+        if(count == 0){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
 }
