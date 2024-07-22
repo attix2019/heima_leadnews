@@ -16,10 +16,10 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>com.heima</groupId>
-            <artifactId>heima-file-starter</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.heima</groupId>-->
+<!--            <artifactId>heima-file-starter</artifactId>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-freemarker</artifactId>
