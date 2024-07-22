@@ -6,21 +6,20 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.heima.apis.article.IArticleClient;
 import com.heima.common.constants.WemediaConstants;
 import com.heima.common.exception.CustomException;
+import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.PageResponseResult;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.WmNewsDto;
 import com.heima.model.wemedia.dtos.WmNewsPageReqDto;
-import com.heima.model.wemedia.pojos.WmMaterial;
-import com.heima.model.wemedia.pojos.WmNews;
-import com.heima.model.wemedia.pojos.WmNewsMaterial;
-import com.heima.wemedia.mapper.WmMaterialMapper;
-import com.heima.wemedia.mapper.WmNewsMapper;
-import com.heima.wemedia.mapper.WmNewsMaterialMapper;
+import com.heima.model.wemedia.pojos.*;
+import com.heima.wemedia.mapper.*;
 import com.heima.wemedia.service.WmNewsService;
 import com.heima.wemedia.util.WmThreadLocalUtils;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,9 +30,12 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> implements WmNewsService {
 
     @Autowired
@@ -44,6 +46,15 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     WmMaterialMapper wmMaterialMapper;
+
+    @Autowired
+    ChannelMapper channelMapper;
+
+    @Autowired
+    WmUserMapper wmUserMapper;
+
+    @Autowired
+    private IArticleClient articleClient;
 
     @Override
     public ResponseResult getNewsList(WmNewsPageReqDto dto) {
@@ -81,6 +92,7 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Override
     @Transactional
+    // todo 加上分布式事务
     public ResponseResult submitNews(WmNewsDto wmNewsDto) {
         // 条件判断
         if(wmNewsDto == null || wmNewsDto.getContent() == null){
@@ -120,7 +132,68 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         // dto中images字段本身就指封面图片，所以无需像内容图片那样提取
         saveRelativeInfoForCover(wmNewsDto,wmNews,materials);
 
+        if(wmNewsDto.getStatus() == 1){
+            mockCensorContent(wmNews);
+        }
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    // todo 待接入真正的内容审查接口
+    // 暂时的做法是，标题里含有“[设置审核状态:\d]”这样的文本，就将文章的状态设置为对应的值
+    private void mockCensorContent(WmNews wmNews){
+        if(!wmNews.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
+            return;
+        }
+        // 模拟审核
+        String title = wmNews.getTitle();
+        String pattern = "\\[设置审核状态:(\\d)\\]";
+        Pattern r = Pattern.compile(pattern);
+        Matcher m = r.matcher(title);
+        // 如果不包含关键字，默认就设置为审核通过
+        Short status = WmNews.Status.PUBLISHED.getCode();
+        if (m.find()) {
+            status = Short.valueOf(m.group(1));
+        }
+        log.info("当前文章的审核结果为: " + status);
+        wmNews.setStatus(status);
+        if(status == WmNews.Status.PUBLISHED.getCode()) {
+            wmNews.setReason("审核成功");
+            wmNews.setPublishTime(new Date());
+            //4.审核成功，调用用户article服务接口
+            ResponseResult responseResult = saveAppArticle(wmNews);
+            if (!responseResult.getCode().equals(200)) {
+                throw new RuntimeException("WmNewsAutoScanServiceImpl-文章审核，保存app端相关文章数据失败");
+            }
+            //回填article_id
+            wmNews.setArticleId((Long) responseResult.getData());
+        }
+        wmNewsMapper.updateById(wmNews);
+    }
+
+    /**
+     * 调用article服务接口在app端保存文章
+     */
+    private ResponseResult saveAppArticle(WmNews wmNews) {
+
+        ArticleDto dto = new ArticleDto();
+        BeanUtils.copyProperties(wmNews,dto);
+        dto.setLayout(wmNews.getType());
+        WmChannel wmChannel = channelMapper.selectById(wmNews.getChannelId());
+        if(wmChannel != null){
+            dto.setChannelName(wmChannel.getName());
+        }
+        dto.setAuthorId(wmNews.getUserId().longValue());
+        WmUser wmUser = wmUserMapper.selectById(wmNews.getUserId());
+        if(wmUser != null){
+            dto.setAuthorName(wmUser.getName());
+        }
+        if(wmNews.getArticleId() != null){
+            dto.setId(wmNews.getArticleId());
+        }
+        dto.setCreatedTime(new Date());
+
+        ResponseResult responseResult = articleClient.saveArticle(dto);
+        return responseResult;
     }
 
     @Override
