@@ -1,6 +1,7 @@
 package com.heima.wemedia.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -16,6 +17,7 @@ import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.WmNewsDto;
 import com.heima.model.wemedia.dtos.WmNewsPageReqDto;
 import com.heima.model.wemedia.pojos.*;
+import com.heima.utils.common.SensitiveWordUtil;
 import com.heima.wemedia.mapper.*;
 import com.heima.wemedia.service.WmNewsService;
 import com.heima.wemedia.util.WmThreadLocalUtils;
@@ -27,10 +29,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -56,6 +55,9 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     private IArticleClient articleClient;
+
+    @Autowired
+    private WmSensitiveMapper wmSensitiveMapper;
 
     @Override
     public ResponseResult getNewsList(WmNewsPageReqDto dto) {
@@ -124,6 +126,10 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         if(wmNewsDto.getType().equals(WemediaConstants.WM_NEWS_TYPE_AUTO)){
             wmNews.setType(null);
         }
+        boolean isSensitive = handleSensitiveScan((String) extractTextAndImages(wmNews).get("content"), wmNews);
+        if(!isSensitive) {
+            return ResponseResult.errorResult(AppHttpCodeEnum.CENSOR_FAILED);
+        }
         saveOrUpdate(wmNews);
 
         if(wmNewsDto.getStatus() == 1){
@@ -137,6 +143,60 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         saveRelativeInfoForCover(wmNewsDto,wmNews,materials);
 
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    /**
+     * 1。从自媒体文章的内容中提取文本和图片
+     * 2.提取文章的封面图片
+     */
+    private Map<String, Object> extractTextAndImages(WmNews wmNews) {
+        StringBuilder stringBuilder = new StringBuilder();
+        List<String> images = new ArrayList<>();
+        //1。从自媒体文章的内容中提取文本和图片
+        if (StringUtils.isNotBlank(wmNews.getContent())) {
+            List<Map> maps = JSONArray.parseArray(wmNews.getContent(), Map.class);
+            for (Map map : maps) {
+                if (map.get("type").equals("text")) {
+                    stringBuilder.append(map.get("value"));
+                }
+                if (map.get("type").equals("image")) {
+                    images.add((String) map.get("value"));
+                }
+            }
+        }
+        //2.提取文章的封面图片
+        if (StringUtils.isNotBlank(wmNews.getImages())) {
+            String[] split = wmNews.getImages().split(",");
+            images.addAll(Arrays.asList(split));
+        }
+        Map<String, Object> resultMap = new HashMap<>();
+        resultMap.put("content", stringBuilder.toString());
+        resultMap.put("images", images);
+        return resultMap;
+    }
+
+
+    private boolean handleSensitiveScan(String content, WmNews wmNews) {
+
+        boolean flag = true;
+
+        //获取所有的敏感词
+        List<WmSensitiveWord> wmSensitives = wmSensitiveMapper.selectList
+                (Wrappers.<WmSensitiveWord>lambdaQuery().select(WmSensitiveWord::getSensitives));
+        List<String> sensitiveList = wmSensitives.stream().map(WmSensitiveWord::getSensitives).collect(Collectors.toList());
+
+        //初始化敏感词库
+        SensitiveWordUtil.initMap(sensitiveList);
+
+        //查看文章中是否包含敏感词
+        Map<String, Integer> map = SensitiveWordUtil.matchWords(content);
+        if(map.size() >0){
+            wmNews.setStatus(WmNews.Status.FAIL.getCode());
+            wmNews.setReason("当前文章中存在违规内容"+map);
+            updateById(wmNews);
+            flag = false;
+        }
+        return flag;
     }
 
     // todo 待接入真正的内容审查接口

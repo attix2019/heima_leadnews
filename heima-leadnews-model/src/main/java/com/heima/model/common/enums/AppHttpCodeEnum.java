@@ -25,6 +25,7 @@ public enum AppHttpCodeEnum {
     DATA_NOT_EXIST(1002,"数据不存在"),
     MATERIASL_REFERENCE_FAIL(1003,"素材引用失效"),
     MATERIAL_STILL_REFERENCED(1004,"素材仍被引用，删除失败"),
+    CENSOR_FAILED(1005,"内容未通过审核"),
     // 数据错误 3000~3500
     NO_OPERATOR_AUTH(3000,"无权限操作"),
     NEED_ADMIND(3001,"需要管理员权限");
