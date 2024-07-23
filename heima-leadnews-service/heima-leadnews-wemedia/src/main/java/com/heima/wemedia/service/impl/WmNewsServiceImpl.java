@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -125,6 +126,9 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         }
         saveOrUpdate(wmNews);
 
+        if(wmNewsDto.getStatus() == 1){
+            mockCensorContent(wmNews);
+        }
         //保存文章内容图片与素材的关系
         List<String> materials =  extractMaterialUrl(wmNewsDto.getContent());
         saveRelativeInfoForContent(materials, wmNews.getId());
@@ -132,15 +136,13 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         // dto中images字段本身就指封面图片，所以无需像内容图片那样提取
         saveRelativeInfoForCover(wmNewsDto,wmNews,materials);
 
-        if(wmNewsDto.getStatus() == 1){
-            mockCensorContent(wmNews);
-        }
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
     // todo 待接入真正的内容审查接口
     // 暂时的做法是，标题里含有“[设置审核状态:\d]”这样的文本，就将文章的状态设置为对应的值
-    private void mockCensorContent(WmNews wmNews){
+    @Async
+    void mockCensorContent(WmNews wmNews){
         if(!wmNews.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
             return;
         }
