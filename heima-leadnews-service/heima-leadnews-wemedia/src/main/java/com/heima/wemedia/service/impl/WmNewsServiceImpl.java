@@ -93,25 +93,22 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         return responseResult;
     }
 
-    @Override
-    @Transactional
-    // todo 加上分布式事务
-    public ResponseResult submitNews(WmNewsDto wmNewsDto) {
-        // 条件判断
-        if(wmNewsDto == null || wmNewsDto.getContent() == null){
-            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
-        }
-        if(wmNewsDto.getId() != null){
-            // 检查userid和newsId是否匹配
-            WmNews correspondingNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId ,wmNewsDto.getId()));
-            if(!correspondingNews.getUserId().equals( WmThreadLocalUtils.getUser().getId())){
-                return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
-            }
-            // 删除素材
-            wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId,
-                    wmNewsDto.getId()));
-        }
 
+    public void checkParamsBeforeSubmit(WmNewsDto wmNewsDto){
+        if(wmNewsDto == null || wmNewsDto.getContent() == null){
+            throw new CustomException(AppHttpCodeEnum.PARAM_INVALID);
+        }
+    }
+
+    // 检查userid和newsId是否匹配
+    public void checkNewsUserIdMatchesOperatorId(WmNewsDto wmNewsDto){
+        WmNews correspondingNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId ,wmNewsDto.getId()));
+        if(!correspondingNews.getUserId().equals( WmThreadLocalUtils.getUser().getId())){
+            throw new CustomException(AppHttpCodeEnum.PARAM_INVALID);
+        }
+    }
+
+    public WmNews generateNewsFromDto(WmNewsDto wmNewsDto){
         WmNews wmNews = new WmNews();
         BeanUtils.copyProperties(wmNewsDto, wmNews);
         wmNews.setUserId(WmThreadLocalUtils.getUser().getId());
@@ -126,22 +123,37 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         if(wmNewsDto.getType().equals(WemediaConstants.WM_NEWS_TYPE_AUTO)){
             wmNews.setType(null);
         }
-        boolean isSensitive = handleSensitiveScan((String) extractTextAndImages(wmNews).get("content"), wmNews);
-        if(!isSensitive) {
-            return ResponseResult.errorResult(AppHttpCodeEnum.CENSOR_FAILED);
-        }
-        saveOrUpdate(wmNews);
+        return wmNews;
+    }
 
+    public void saveMaterialsAndNewsRelations(WmNewsDto wmNewsDto, Integer id){
+        //保存文章内容图片与素材的关系
+        List<String> materials = extractMaterialUrl(wmNewsDto.getContent());
+        saveRelativeInfoForContent(materials, id);
+        //保存文章封面图片与素材的关系，如果当前布局是自动，需要匹配封面图片
+        // dto中images字段本身就指封面图片，所以无需像内容图片那样提取
+        saveRelativeInfoForCover(wmNewsDto,id,materials);
+    }
+
+    @Override
+    @Transactional
+    // todo 加上分布式事务
+    public ResponseResult submitNews(WmNewsDto wmNewsDto) {
+        checkParamsBeforeSubmit(wmNewsDto);
+        if(wmNewsDto.getId() != null){
+            checkNewsUserIdMatchesOperatorId(wmNewsDto);
+            wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId,
+                    wmNewsDto.getId()));
+        }
+        WmNews wmNews = generateNewsFromDto(wmNewsDto);
+        Map<String, Object> textAndImages = extractTextAndImages(wmNews);
+        censorTextLocally((String) textAndImages.get("content"), wmNews);
+
+        saveOrUpdate(wmNews);
         if(wmNewsDto.getStatus() == 1){
             mockCensorContent(wmNews);
         }
-        //保存文章内容图片与素材的关系
-        List<String> materials =  extractMaterialUrl(wmNewsDto.getContent());
-        saveRelativeInfoForContent(materials, wmNews.getId());
-        //保存文章封面图片与素材的关系，如果当前布局是自动，需要匹配封面图片
-        // dto中images字段本身就指封面图片，所以无需像内容图片那样提取
-        saveRelativeInfoForCover(wmNewsDto,wmNews,materials);
-
+        saveMaterialsAndNewsRelations(wmNewsDto, wmNews.getId());
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
@@ -153,6 +165,7 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         StringBuilder stringBuilder = new StringBuilder();
         List<String> images = new ArrayList<>();
         //1。从自媒体文章的内容中提取文本和图片
+        stringBuilder.append(wmNews.getTitle());
         if (StringUtils.isNotBlank(wmNews.getContent())) {
             List<Map> maps = JSONArray.parseArray(wmNews.getContent(), Map.class);
             for (Map map : maps) {
@@ -176,10 +189,7 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
     }
 
 
-    private boolean handleSensitiveScan(String content, WmNews wmNews) {
-
-        boolean flag = true;
-
+    private void censorTextLocally(String content, WmNews wmNews) {
         //获取所有的敏感词
         List<WmSensitiveWord> wmSensitives = wmSensitiveMapper.selectList
                 (Wrappers.<WmSensitiveWord>lambdaQuery().select(WmSensitiveWord::getSensitives));
@@ -194,9 +204,8 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
             wmNews.setStatus(WmNews.Status.FAIL.getCode());
             wmNews.setReason("当前文章中存在违规内容"+map);
             updateById(wmNews);
-            flag = false;
+            throw new CustomException(AppHttpCodeEnum.CENSOR_FAILED);
         }
-        return flag;
     }
 
     // todo 待接入真正的内容审查接口
@@ -303,31 +312,33 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
      *
      * 第二个功能：保存封面图片与素材的关系
      * @param dto
-     * @param wmNews
+     * @param id
      * @param materials
      */
-    private void saveRelativeInfoForCover(WmNewsDto dto, WmNews wmNews, List<String> materials) {
+    private void saveRelativeInfoForCover(WmNewsDto dto, Integer id, List<String> materials) {
         List<String> images = dto.getImages();
         //如果当前封面类型为自动，则设置封面类型的数据
         if(dto.getType().equals(WemediaConstants.WM_NEWS_TYPE_AUTO)){
             //多图
+            WmNews tmp = new WmNews();
+            tmp.setId(id);
             if(materials.size() >= 3){
-                wmNews.setType(WemediaConstants.WM_NEWS_MANY_IMAGE);
+                tmp.setType(WemediaConstants.WM_NEWS_MANY_IMAGE);
                 images = materials.stream().limit(3).collect(Collectors.toList());
             }else if(materials.size() >= 1 && materials.size() < 3){
                 //单图
-                wmNews.setType(WemediaConstants.WM_NEWS_SINGLE_IMAGE);
+                tmp.setType(WemediaConstants.WM_NEWS_SINGLE_IMAGE);
                 images = materials.stream().limit(1).collect(Collectors.toList());
             }else {
                 //无图
-                wmNews.setType(WemediaConstants.WM_NEWS_NONE_IMAGE);
+                tmp.setType(WemediaConstants.WM_NEWS_NONE_IMAGE);
             }
             // 封面设置为自动类型的话需要额外更新一次
-            wmNews.setImages(StringUtils.join(images, ","));
-            updateById(wmNews);
+            tmp.setImages(StringUtils.join(images, ","));
+            updateById(tmp);
         }
         if(images != null && images.size() > 0){
-            saveRelativeInfo(images,wmNews.getId(),WemediaConstants.WM_COVER_REFERENCE);
+            saveRelativeInfo(images,id,WemediaConstants.WM_COVER_REFERENCE);
         }
     }
 
