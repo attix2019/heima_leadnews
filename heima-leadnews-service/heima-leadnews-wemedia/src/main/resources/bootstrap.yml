@@ -16,3 +16,6 @@ minio:
   bucket: leadnews
   endpoint: http://192.168.200.130:9000
   readPath: http://192.168.200.130:9000
+tess4j:
+  language: chi_sim
+  data-path: D:\code\hm_toutiao\heima_leadnews\heima-leadnews-service\heima-leadnews-wemedia\src\main\resources\tessdata

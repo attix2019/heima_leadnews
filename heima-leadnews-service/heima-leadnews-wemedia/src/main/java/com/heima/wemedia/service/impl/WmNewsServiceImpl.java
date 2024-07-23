@@ -10,6 +10,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.heima.apis.article.IArticleClient;
 import com.heima.common.constants.WemediaConstants;
 import com.heima.common.exception.CustomException;
+import com.heima.common.tess4j.Tess4jClient;
+import com.heima.file.service.FileStorageService;
 import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.PageResponseResult;
 import com.heima.model.common.dtos.ResponseResult;
@@ -22,6 +24,7 @@ import com.heima.wemedia.mapper.*;
 import com.heima.wemedia.service.WmNewsService;
 import com.heima.wemedia.util.WmThreadLocalUtils;
 import lombok.extern.slf4j.Slf4j;
+import net.sourceforge.tess4j.TesseractException;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +32,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -58,6 +67,12 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     private WmSensitiveMapper wmSensitiveMapper;
+
+    @Autowired
+    FileStorageService fileStorageService;
+
+    @Autowired
+    Tess4jClient tess4jClient;
 
     @Override
     public ResponseResult getNewsList(WmNewsPageReqDto dto) {
@@ -148,6 +163,7 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         WmNews wmNews = generateNewsFromDto(wmNewsDto);
         Map<String, Object> textAndImages = extractTextAndImages(wmNews);
         censorTextLocally((String) textAndImages.get("content"), wmNews);
+        censorImageLocally((List<String>) textAndImages.get("images"),wmNews);
 
         saveOrUpdate(wmNews);
         if(wmNewsDto.getStatus() == 1){
@@ -188,6 +204,29 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         return resultMap;
     }
 
+    private void censorImageLocally(List<String> images, WmNews wmNews){
+        if (images == null || images.size() == 0) {
+            return;
+        }
+        images = images.stream().distinct().collect(Collectors.toList());
+        for (String image : images) {
+            byte[] bytes = fileStorageService.downLoadFile(image);
+            ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+            BufferedImage imageFile = null;
+            try {
+                imageFile = ImageIO.read(in);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            String result = null;
+            try {
+                result = tess4jClient.doOCR(imageFile);
+            } catch (TesseractException e) {
+                e.printStackTrace();
+            }
+            censorTextLocally(result, wmNews);
+        }
+    }
 
     private void censorTextLocally(String content, WmNews wmNews) {
         //获取所有的敏感词

@@ -1,3 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
   com.heima.common.exception.ExceptionCatch, \
-  com.heima.common.config.Knife4jConfig
+  com.heima.common.config.Knife4jConfig, \
+  com.heima.common.tess4j.Tess4jClient
