@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient("leadnews-schedule")
+@FeignClient(value = "leadnews-schedule")
 public interface IScheduleClient {
 
     /**

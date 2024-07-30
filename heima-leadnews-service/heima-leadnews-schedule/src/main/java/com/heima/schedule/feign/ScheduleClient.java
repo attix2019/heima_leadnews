@@ -4,10 +4,11 @@ import com.heima.apis.schedule.IScheduleClient;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.schedule.dtos.Task;
 import com.heima.schedule.service.TaskService;
+import io.swagger.annotations.Api;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-
+@Api(tags = "延时任务远程调用接口")
 @RestController
 public class ScheduleClient  implements IScheduleClient {
 

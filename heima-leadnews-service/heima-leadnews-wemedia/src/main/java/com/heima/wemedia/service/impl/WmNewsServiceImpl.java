@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.heima.apis.article.IArticleClient;
+import com.heima.apis.schedule.IScheduleClient;
 import com.heima.common.constants.WemediaConstants;
 import com.heima.common.exception.CustomException;
 import com.heima.common.tess4j.Tess4jClient;
@@ -16,9 +17,12 @@ import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.PageResponseResult;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.common.enums.TaskTypeEnum;
+import com.heima.model.schedule.dtos.Task;
 import com.heima.model.wemedia.dtos.WmNewsDto;
 import com.heima.model.wemedia.dtos.WmNewsPageReqDto;
 import com.heima.model.wemedia.pojos.*;
+import com.heima.utils.common.ProtostuffUtil;
 import com.heima.utils.common.SensitiveWordUtil;
 import com.heima.wemedia.mapper.*;
 import com.heima.wemedia.service.WmNewsService;
@@ -29,15 +33,14 @@ import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,6 +76,9 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     Tess4jClient tess4jClient;
+
+    @Autowired
+    IScheduleClient scheduleClient;
 
     @Override
     public ResponseResult getNewsList(WmNewsPageReqDto dto) {
@@ -166,8 +172,8 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         censorImageLocally((List<String>) textAndImages.get("images"),wmNews);
 
         saveOrUpdate(wmNews);
-        if(wmNewsDto.getStatus() == 1){
-            mockCensorContent(wmNews);
+        if(wmNewsDto.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
+            addNewsToTask(wmNews.getId(),wmNews.getPublishTime());
         }
         saveMaterialsAndNewsRelations(wmNewsDto, wmNews.getId());
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
@@ -250,9 +256,10 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
     // todo 待接入真正的内容审查接口
     // 暂时的做法是，标题里含有“[设置审核状态:\d]”这样的文本，就将文章的状态设置为对应的值
     @Async
-    void mockCensorContent(WmNews wmNews){
-        if(!wmNews.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
-            return;
+    void mockCensorContent(Integer id){
+        WmNews wmNews = wmNewsMapper.selectById(id);
+        if(wmNews == null){
+            throw new RuntimeException("WmNewsAutoScanServiceImpl-文章不存在");
         }
         // 模拟审核
         String title = wmNews.getTitle();
@@ -416,4 +423,42 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
     }
 
 
+    /**
+     * 添加任务到延迟队列中
+     * @param id          文章的id
+     * @param publishTime 发布的时间  可以做为任务的执行时间
+     */
+    @Async
+    public void addNewsToTask(Integer id, Date publishTime) {
+
+        log.info("添加任务到延迟服务中----begin");
+
+        Task task = new Task();
+        task.setExecuteTime(publishTime.getTime());
+        task.setTaskType(TaskTypeEnum.NEWS_SCAN_TIME.getTaskType());
+        task.setPriority(TaskTypeEnum.NEWS_SCAN_TIME.getPriority());
+        WmNews wmNews = new WmNews();
+        wmNews.setId(id);
+        task.setParameters(ProtostuffUtil.serialize(wmNews));
+
+        scheduleClient.addTask(task);
+
+        log.info("添加任务到延迟服务中----end");
+
+    }
+
+    @Scheduled(fixedRate = 1000)
+    public void scanNewsByTask() {
+//        log.info("文章审核---消费任务执行---begin---");
+        ResponseResult responseResult = scheduleClient.poll(TaskTypeEnum.NEWS_SCAN_TIME.getTaskType(), TaskTypeEnum.NEWS_SCAN_TIME.getPriority());
+        if(responseResult.getCode().equals(200) && responseResult.getData() != null){
+            String json_str = JSON.toJSONString(responseResult.getData());
+            Task task = JSON.parseObject(json_str, Task.class);
+            byte[] parameters = task.getParameters();
+            WmNews wmNews = ProtostuffUtil.deserialize(parameters, WmNews.class);
+            log.info("审核文章---" + wmNews.getId());
+            mockCensorContent(wmNews.getId());
+        }
+//        log.info("文章审核---消费任务执行---end---");
+    }
 }
