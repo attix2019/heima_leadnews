@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.heima.apis.article.IArticleClient;
 import com.heima.apis.schedule.IScheduleClient;
 import com.heima.common.constants.WemediaConstants;
+import com.heima.common.constants.WmNewsMessageConstants;
 import com.heima.common.exception.CustomException;
 import com.heima.common.tess4j.Tess4jClient;
 import com.heima.file.service.FileStorageService;
@@ -32,6 +33,7 @@ import net.sourceforge.tess4j.TesseractException;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -79,6 +81,9 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     @Autowired
     IScheduleClient scheduleClient;
+
+    @Autowired
+    KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
     public ResponseResult getNewsList(WmNewsPageReqDto dto) {
@@ -341,6 +346,35 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         wmNewsMapper.deleteById(wmNews.getId());
         // delete from wm_news_material where news_id = ?
         wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId, id));
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult listOrDelistNews(WmNewsDto dto) {
+        if(dto.getId() == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"文章ID不可缺少");
+        }
+        WmNews wmNews = getById(dto.getId());
+        if(wmNews == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.DATA_NOT_EXIST,"文章不存在");
+        }
+        if(!wmNews.getStatus().equals(WmNews.Status.PUBLISHED.getCode())){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID,"当前文章不是发布状态，不能上下架");
+        }
+
+        // 修改文章上下架状态为dto传来的值
+        if(dto.getEnable() != null && dto.getEnable() > -1 && dto.getEnable() < 2){
+            update(Wrappers.<WmNews>lambdaUpdate().set(WmNews::getEnable,dto.getEnable())
+                    .eq(WmNews::getId,wmNews.getId()));
+        }
+
+        //发送消息，通知article端修改文章配置
+        if(wmNews.getArticleId() != null){
+            Map<String,Object> map = new HashMap<>();
+            map.put("articleId",wmNews.getArticleId());
+            map.put("enable",dto.getEnable());
+            kafkaTemplate.send(WmNewsMessageConstants.WM_NEWS_UP_OR_DOWN_TOPIC,JSON.toJSONString(map));
+        }
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 

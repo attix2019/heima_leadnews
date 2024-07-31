@@ -40,4 +40,10 @@ public class NewsController {
         return wmNewsService.deleteNews(id);
     }
 
+    @PostMapping("/down_or_up")
+    @ApiOperation("文章上下架")
+    public ResponseResult listOrDelistNews(@RequestBody WmNewsDto dto){
+        return wmNewsService.listOrDelistNews(dto);
+    }
+
 }
