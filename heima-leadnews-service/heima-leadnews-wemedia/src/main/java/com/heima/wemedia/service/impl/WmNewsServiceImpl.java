@@ -123,6 +123,9 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
 
     // 检查userid和newsId是否匹配
     public void checkNewsUserIdMatchesOperatorId(WmNewsDto wmNewsDto){
+        if(wmNewsDto.getId() == null) {
+            return;
+        }
         WmNews correspondingNews = getOne(Wrappers.<WmNews>lambdaQuery().eq(WmNews::getId ,wmNewsDto.getId()));
         if(!correspondingNews.getUserId().equals( WmThreadLocalUtils.getUser().getId())){
             throw new CustomException(AppHttpCodeEnum.PARAM_INVALID);
@@ -161,16 +164,16 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
     // todo 加上分布式事务
     public ResponseResult submitNews(WmNewsDto wmNewsDto) {
         checkParamsBeforeSubmit(wmNewsDto);
-        if(wmNewsDto.getId() != null){
-            checkNewsUserIdMatchesOperatorId(wmNewsDto);
-            wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId,
-                    wmNewsDto.getId()));
-        }
+        checkNewsUserIdMatchesOperatorId(wmNewsDto);
+
         WmNews wmNews = generateNewsFromDto(wmNewsDto);
         Map<String, Object> textAndImages = extractTextAndImages(wmNews);
         censorTextLocally((String) textAndImages.get("content"), wmNews);
         censorImageLocally((List<String>) textAndImages.get("images"),wmNews);
 
+        if(wmNewsDto.getId() != null){
+            wmNewsMaterialMapper.delete(Wrappers.<WmNewsMaterial>lambdaQuery().eq(WmNewsMaterial::getNewsId, wmNewsDto.getId()));
+        }
         saveOrUpdate(wmNews);
         if(wmNewsDto.getStatus().equals(WmNews.Status.SUBMIT.getCode())){
             addNewsToTask(wmNews.getId(),wmNews.getPublishTime());
