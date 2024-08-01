@@ -1,6 +1,7 @@
 package com.heima.article.service.impl;
 
 import com.alibaba.cloud.commons.lang.StringUtils;
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -8,7 +9,7 @@ import com.heima.article.mapper.ArticleConfigMapper;
 import com.heima.article.mapper.ArticleContentMapper;
 import com.heima.article.mapper.ArticleMapper;
 import com.heima.article.service.ArticleService;
-import com.heima.common.constants.ArticleLoadingModeConstant;
+import com.heima.common.constants.ArticleConstants;
 import com.heima.common.exception.CustomException;
 import com.heima.file.service.FileStorageService;
 import com.heima.model.article.dtos.ArticleDto;
@@ -18,10 +19,13 @@ import com.heima.model.article.pojos.ApArticleConfig;
 import com.heima.model.article.pojos.ApArticleContent;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.search.vos.SearchArticleVo;
 import freemarker.template.Configuration;
 import freemarker.template.Template;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
+@Slf4j
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, ApArticle> implements ArticleService{
 
     @Autowired
@@ -54,6 +59,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, ApArticle> im
     @Autowired
     ArticleServiceImpl proxy;
 
+    @Autowired
+    private KafkaTemplate<String,String> kafkaTemplate;
+
     // 单页最大加载的数字
     private final static short MAX_PAGE_SIZE = 50;
 
@@ -68,13 +76,13 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, ApArticle> im
         articleHomeDto.setSize(size);
 
         //类型参数检验
-        if(!(ArticleLoadingModeConstant.LOAD_MORE).equals(type)&&
-                !(ArticleLoadingModeConstant.LOAD_NEW).equals(type)){
-            type = ArticleLoadingModeConstant.LOAD_MORE;
+        if(!(ArticleConstants.LOAD_MORE).equals(type)&&
+                !(ArticleConstants.LOAD_NEW).equals(type)){
+            type = ArticleConstants.LOAD_MORE;
         }
         //文章频道校验
         if(StringUtils.isEmpty(articleHomeDto.getTag())){
-            articleHomeDto.setTag(ArticleLoadingModeConstant.DEFAULT_CHANNEL);
+            articleHomeDto.setTag(ArticleConstants.DEFAULT_CHANNEL);
         }
 
         //时间校验
@@ -149,5 +157,23 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, ApArticle> im
         //4.4 修改ap_article表，保存static_url字段
         update(Wrappers.<ApArticle>lambdaUpdate().eq(ApArticle::getId, apArticle.getId())
                 .set(ApArticle::getStaticUrl, path));
+        //发送消息，创建索引
+        createArticleESIndex(apArticle,content,path);
     }
+
+    /**
+     * 送消息，创建索引
+     * @param apArticle
+     * @param content
+     * @param path
+     */
+    private void createArticleESIndex(ApArticle apArticle, String content, String path) {
+        SearchArticleVo vo = new SearchArticleVo();
+        BeanUtils.copyProperties(apArticle,vo);
+        vo.setContent(content);
+        vo.setStaticUrl(path);
+        log.info("send message to search module, build index for article:" + apArticle.getTitle());
+        kafkaTemplate.send(ArticleConstants.ARTICLE_ES_SYNC_TOPIC, JSON.toJSONString(vo));
+    }
+
 }
