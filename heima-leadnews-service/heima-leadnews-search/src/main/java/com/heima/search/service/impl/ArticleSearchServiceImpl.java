@@ -4,7 +4,10 @@ import com.alibaba.fastjson.JSON;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.search.dtos.ArticleSearchDto;
+import com.heima.model.user.pojos.ApUser;
 import com.heima.search.service.ArticleSearchService;
+import com.heima.search.service.SearchBoxService;
+import com.heima.search.util.SearchModuleThreadLocalUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchRequest;
@@ -32,6 +35,9 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
     @Autowired
     private RestHighLevelClient restHighLevelClient;
 
+    @Autowired
+    SearchBoxService searchBoxService;
+
     /**
      * es文章分页检索
      *
@@ -45,6 +51,9 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
         if(dto == null || StringUtils.isBlank(dto.getSearchWords())){
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
         }
+
+        ApUser apUser = SearchModuleThreadLocalUtils.getUser();
+        searchBoxService.insertHistorySearchRecords(dto.getSearchWords(), apUser.getId());
 
         //2.设置查询条件
         SearchRequest searchRequest = new SearchRequest("app_info_article");
@@ -101,8 +110,6 @@ public class ArticleSearchServiceImpl implements ArticleSearchService {
             }
             list.add(map);
         }
-
         return ResponseResult.okResult(list);
-
     }
 }
