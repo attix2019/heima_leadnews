@@ -2,6 +2,7 @@ package com.heima.search.service.impl;
 
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
+import com.heima.model.search.dtos.HistorySearchDto;
 import com.heima.model.user.pojos.ApUser;
 import com.heima.search.pojos.SearchWordRecord;
 import com.heima.search.service.SearchBoxService;
@@ -66,5 +67,23 @@ public class SearchBoxServiceImpl implements SearchBoxService {
         //根据用户查询数据，按照时间倒序
         List<SearchWordRecord> searchWordRecordList = mongoTemplate.find(Query.query(Criteria.where("userId").is(user.getId())).with(Sort.by(Sort.Direction.DESC, "createdTime")), SearchWordRecord.class);
         return ResponseResult.okResult(searchWordRecordList);
+    }
+
+    @Override
+    public ResponseResult deleteHistorySearchRecord(HistorySearchDto dto) {
+        if(dto.getId() == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        ApUser user = SearchModuleThreadLocalUtils.getUser();
+        if(user == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.NEED_LOGIN);
+        }
+        Query query = new Query(Criteria.where("id").is(dto.getId()));
+        SearchWordRecord searchWordRecord = mongoTemplate.findOne(query,SearchWordRecord.class);
+        if(searchWordRecord == null || !searchWordRecord.getUserId().equals(user.getId())){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID);
+        }
+        mongoTemplate.remove(searchWordRecord);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }
