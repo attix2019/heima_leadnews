@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @Slf4j
-public class ChannelManagementController {
+public class AdminChannelController {
 
     @Autowired
     IChannelClient channelClient;
@@ -29,5 +29,10 @@ public class ChannelManagementController {
     @GetMapping("/wemedia/api/v1/channel/del/{id}")
     public ResponseResult deleteChannel(@PathVariable Integer id){
         return channelClient.deleteChannel(id);
+    }
+
+    @PostMapping("/wemedia/api/v1/channel/update")
+    public ResponseResult modifyChannel(@RequestBody ChannelDto channelDto){
+        return channelClient.modifyChannel(channelDto);
     }
 }

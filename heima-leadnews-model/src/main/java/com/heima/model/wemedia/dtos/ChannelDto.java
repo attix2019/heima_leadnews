@@ -10,7 +10,7 @@ public class ChannelDto {
 
     private String description;
 
-//    private Integer id;
+    private Integer id;
 
 //    private Boolean isDefault;
 

@@ -8,6 +8,7 @@ import com.heima.model.wemedia.dtos.ChannelDto;
 import com.heima.model.wemedia.pojos.WmChannel;
 import com.heima.wemedia.mapper.ChannelMapper;
 import com.heima.wemedia.service.ChannelService;
+import org.omg.PortableInterceptor.SUCCESSFUL;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,19 @@ public class ChannelServiceImpl extends ServiceImpl<ChannelMapper, WmChannel> im
             return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "频道不存在");
         }
         channelMapper.deleteById(id);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult modifyChannel(ChannelDto channelDto) {
+        WmChannel wmChannel = channelMapper.selectOne(Wrappers.<WmChannel>lambdaQuery().eq(
+                WmChannel::getId, channelDto.getId()));
+        if(wmChannel == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "频道不存在");
+        }
+        WmChannel tmp = new WmChannel();
+        BeanUtils.copyProperties(channelDto, tmp);
+        updateById(tmp);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }

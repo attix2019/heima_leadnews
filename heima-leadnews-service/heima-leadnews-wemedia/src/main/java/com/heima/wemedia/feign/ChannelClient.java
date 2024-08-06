@@ -9,6 +9,7 @@ import org.simpleframework.xml.Path;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,5 +32,10 @@ public class ChannelClient implements IChannelClient {
     @GetMapping("/api/v1/channel/del/{id}")
     public ResponseResult deleteChannel( @PathVariable  Integer id) {
         return channelService.deleteChannel(id);
+    }
+
+    @Override
+    public ResponseResult modifyChannel(@RequestBody ChannelDto channelDto) {
+        return channelService.modifyChannel(channelDto);
     }
 }

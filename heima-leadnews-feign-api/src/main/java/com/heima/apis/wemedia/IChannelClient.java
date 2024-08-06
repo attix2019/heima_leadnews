@@ -20,4 +20,7 @@ public interface IChannelClient {
 
     @GetMapping("/api/v1/channel/del/{id}")
     ResponseResult deleteChannel(@PathVariable Integer id);
+
+    @PostMapping("/api/v1/channel/update")
+    ResponseResult modifyChannel(@RequestBody ChannelDto channelDto);
 }
