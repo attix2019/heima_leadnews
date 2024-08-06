@@ -29,5 +29,10 @@ public class SensitiveWordController {
         return wemediaClient.addSensitiveWord(sensitiveWordDto);
     }
 
+    @PostMapping("/wemedia/api/v1/sensitive/update")
+    ResponseResult modifySensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto){
+        return wemediaClient.modifySensitiveWord(sensitiveWordDto);
+    }
+
 }
 

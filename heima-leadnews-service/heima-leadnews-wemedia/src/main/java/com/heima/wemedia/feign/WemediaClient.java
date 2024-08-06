@@ -71,17 +71,33 @@ public class WemediaClient implements IWemediaClient {
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
+    private Boolean theWordAlreadyExists(String wordText){
+        WmSensitiveWord sensitiveWord = wmSensitiveMapper.selectOne(Wrappers.<WmSensitiveWord>lambdaQuery().eq(
+                WmSensitiveWord::getSensitives, wordText));
+        return (sensitiveWord != null);
+
+    }
+
     @Override
     public ResponseResult addSensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto) {
-        WmSensitiveWord sensitiveWord = wmSensitiveMapper.selectOne(Wrappers.<WmSensitiveWord>lambdaQuery().eq(
-                WmSensitiveWord::getSensitives, sensitiveWordDto.getSensitives()));
-        if(sensitiveWord != null){
-            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "敏感词已存在");
+        if(theWordAlreadyExists(sensitiveWordDto.getSensitives())){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "敏感词已经存在");
         }
         WmSensitiveWord wmSensitiveWord = new WmSensitiveWord();
         BeanUtils.copyProperties(sensitiveWordDto, wmSensitiveWord);
         wmSensitiveWord.setCreatedTime(new Date());
         wmSensitiveMapper.insert(wmSensitiveWord);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult modifySensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto) {
+        if(theWordAlreadyExists(sensitiveWordDto.getSensitives())){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "敏感词已经存在");
+        }
+        WmSensitiveWord wmSensitiveWord = new WmSensitiveWord();
+        BeanUtils.copyProperties(sensitiveWordDto, wmSensitiveWord);
+        wmSensitiveMapper.updateById(wmSensitiveWord);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }

@@ -34,4 +34,7 @@ public interface IWemediaClient {
 
     @PostMapping("/api/v1/sensitive/save")
     ResponseResult addSensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto);
+
+    @PostMapping("/api/v1/sensitive/update")
+    ResponseResult modifySensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto);
 }
