@@ -12,4 +12,6 @@ public interface ChannelService extends IService<WmChannel> {
     ResponseResult addChannel(ChannelDto channelDto);
 
     ResponseResult deleteChannel(Integer id);
+
+    ResponseResult modifyChannel(ChannelDto channelDto);
 }

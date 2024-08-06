@@ -30,4 +30,9 @@ public class ChannelManagementController {
     public ResponseResult deleteChannel(@PathVariable Integer id){
         return channelClient.deleteChannel(id);
     }
+
+    @PostMapping("/wemedia/api/v1/channel/update")
+    public ResponseResult modifyChannel(@RequestBody ChannelDto channelDto){
+        return channelClient.modifyChannel(channelDto);
+    }
 }
