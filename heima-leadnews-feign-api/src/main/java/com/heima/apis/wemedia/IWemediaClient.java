@@ -3,12 +3,10 @@ package com.heima.apis.wemedia;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
 import com.heima.model.wemedia.dtos.ChannelDto;
+import com.heima.model.wemedia.dtos.SensitiveWordDto;
 import com.heima.model.wemedia.dtos.SensitiveWordPageQueryDto;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 @FeignClient(value = "leadnews-wemedia")
 public interface IWemediaClient {
@@ -30,4 +28,10 @@ public interface IWemediaClient {
     // 敏感词管理
     @PostMapping("/api/v1/sensitive/list")
     ResponseResult listSensitiveWords(@RequestBody SensitiveWordPageQueryDto dto);
+
+    @DeleteMapping("/api/v1/sensitive/del/{id}")
+    ResponseResult deleteSensitiveWord(@PathVariable Integer id);
+
+    @PostMapping("/api/v1/sensitive/save")
+    ResponseResult addSensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto);
 }

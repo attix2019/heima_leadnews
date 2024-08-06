@@ -5,18 +5,19 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.heima.apis.wemedia.IWemediaClient;
 import com.heima.model.common.dtos.ResponseResult;
+import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
 import com.heima.model.wemedia.dtos.ChannelDto;
+import com.heima.model.wemedia.dtos.SensitiveWordDto;
 import com.heima.model.wemedia.dtos.SensitiveWordPageQueryDto;
 import com.heima.model.wemedia.pojos.WmSensitiveWord;
 import com.heima.wemedia.mapper.WmSensitiveMapper;
 import com.heima.wemedia.service.ChannelService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.Date;
 import java.util.List;
 
 @RestController
@@ -57,5 +58,30 @@ public class WemediaClient implements IWemediaClient {
         }
         List<WmSensitiveWord> sensitiveWordList = wmSensitiveMapper.selectList(wrapper);
         return ResponseResult.okResult(sensitiveWordList);
+    }
+
+    @Override
+    @DeleteMapping("/api/v1/sensitive/del/{id}")
+    public ResponseResult deleteSensitiveWord(@PathVariable Integer id) {
+        WmSensitiveWord word = wmSensitiveMapper.selectById(id);
+        if(word == null){
+            return  ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "敏感词不存在");
+        }
+        wmSensitiveMapper.deleteById(id);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult addSensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto) {
+        WmSensitiveWord sensitiveWord = wmSensitiveMapper.selectOne(Wrappers.<WmSensitiveWord>lambdaQuery().eq(
+                WmSensitiveWord::getSensitives, sensitiveWordDto.getSensitives()));
+        if(sensitiveWord != null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "敏感词已存在");
+        }
+        WmSensitiveWord wmSensitiveWord = new WmSensitiveWord();
+        BeanUtils.copyProperties(sensitiveWordDto, wmSensitiveWord);
+        wmSensitiveWord.setCreatedTime(new Date());
+        wmSensitiveMapper.insert(wmSensitiveWord);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 }
