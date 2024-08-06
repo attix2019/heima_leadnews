@@ -10,4 +10,6 @@ public interface ChannelService extends IService<WmChannel> {
     ResponseResult getChannelList();
 
     ResponseResult addChannel(ChannelDto channelDto);
+
+    ResponseResult deleteChannel(Integer id);
 }

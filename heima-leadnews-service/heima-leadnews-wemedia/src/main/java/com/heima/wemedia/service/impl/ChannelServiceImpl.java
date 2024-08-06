@@ -41,4 +41,14 @@ public class ChannelServiceImpl extends ServiceImpl<ChannelMapper, WmChannel> im
         save(tmp);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
+
+    @Override
+    public ResponseResult deleteChannel(Integer id) {
+        WmChannel wmChannel = channelMapper.selectOne(Wrappers.<WmChannel>lambdaQuery().eq(WmChannel::getId,id));
+        if(wmChannel == null){
+            return ResponseResult.errorResult(AppHttpCodeEnum.PARAM_INVALID, "频道不存在");
+        }
+        channelMapper.deleteById(id);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
 }
