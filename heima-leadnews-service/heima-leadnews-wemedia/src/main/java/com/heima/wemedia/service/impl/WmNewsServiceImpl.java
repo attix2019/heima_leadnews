@@ -510,4 +510,14 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         responseResult.setData(page.getRecords());
         return responseResult;
     }
+
+    @Override
+    public ResponseResult getArticleDetailForAdmin(Integer id) {
+        AdminArticleListItemVo adminArticleListItemVo = new AdminArticleListItemVo();
+        WmNews wmNews = wmNewsMapper.selectById(id);
+        BeanUtils.copyProperties(wmNews, adminArticleListItemVo);
+        WmUser wmUser = wmUserMapper.selectById(wmNews.getUserId());
+        adminArticleListItemVo.setAuthorName(wmUser.getName());
+        return ResponseResult.okResult(adminArticleListItemVo);
+    }
 }

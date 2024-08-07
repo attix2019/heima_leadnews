@@ -23,4 +23,6 @@ public interface WmNewsService extends IService<WmNews> {
 
     // 为admin提供的接口实现
     ResponseResult listArticlesForAdmin(AdminArticlePageDto dto);
+
+    ResponseResult getArticleDetailForAdmin(Integer id);
 }

@@ -35,4 +35,9 @@ public class AdminChannelController {
     public ResponseResult modifyChannel(@RequestBody ChannelDto channelDto){
         return wemediaCient.modifyChannel(channelDto);
     }
+
+    @GetMapping("/wemedia/api/v1/news/one_vo/{id}")
+    public ResponseResult getArticleDetail(@PathVariable Integer id){
+        return wemediaCient.getArticleDetailForAdmin(id);
+    }
 }

@@ -5,12 +5,14 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.heima.apis.wemedia.IWemediaClient;
 import com.heima.model.admin.dtos.AdminArticlePageDto;
+import com.heima.model.admin.vos.AdminArticleListItemVo;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
 import com.heima.model.wemedia.dtos.ChannelDto;
 import com.heima.model.wemedia.dtos.SensitiveWordDto;
 import com.heima.model.wemedia.dtos.SensitiveWordPageQueryDto;
+import com.heima.model.wemedia.pojos.WmNews;
 import com.heima.model.wemedia.pojos.WmSensitiveWord;
 import com.heima.wemedia.mapper.WmNewsMapper;
 import com.heima.wemedia.mapper.WmSensitiveMapper;
@@ -110,5 +112,11 @@ public class WemediaClient implements IWemediaClient {
     @Override
     public ResponseResult listArticles(@RequestBody  AdminArticlePageDto dto) {
         return wmNewsService.listArticlesForAdmin(dto);
+    }
+
+    @Override
+    @GetMapping("/api/v1/news/one_vo/{id}")
+    public ResponseResult getArticleDetailForAdmin(@PathVariable Integer id) {
+        return wmNewsService.getArticleDetailForAdmin(id);
     }
 }

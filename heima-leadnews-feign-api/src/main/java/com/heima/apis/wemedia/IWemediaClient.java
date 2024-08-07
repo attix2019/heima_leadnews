@@ -42,4 +42,7 @@ public interface IWemediaClient {
     // 文章管理
     @PostMapping("/api/v1/news/list_vo")
     ResponseResult listArticles(@RequestBody AdminArticlePageDto dto);
+
+    @GetMapping("/api/v1/news/one_vo/{id}")
+    ResponseResult getArticleDetailForAdmin(@PathVariable Integer id);
 }
