@@ -1,5 +1,6 @@
 package com.heima.apis.wemedia;
 
+import com.heima.model.admin.dtos.AdminArticlePageDto;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
 import com.heima.model.wemedia.dtos.ChannelDto;
@@ -37,4 +38,8 @@ public interface IWemediaClient {
 
     @PostMapping("/api/v1/sensitive/update")
     ResponseResult modifySensitiveWord(@RequestBody SensitiveWordDto sensitiveWordDto);
+
+    // 文章管理
+    @PostMapping("/api/v1/news/list_vo")
+    ResponseResult listArticles(@RequestBody AdminArticlePageDto dto);
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.heima.apis.wemedia.IWemediaClient;
+import com.heima.model.admin.dtos.AdminArticlePageDto;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
@@ -11,8 +12,10 @@ import com.heima.model.wemedia.dtos.ChannelDto;
 import com.heima.model.wemedia.dtos.SensitiveWordDto;
 import com.heima.model.wemedia.dtos.SensitiveWordPageQueryDto;
 import com.heima.model.wemedia.pojos.WmSensitiveWord;
+import com.heima.wemedia.mapper.WmNewsMapper;
 import com.heima.wemedia.mapper.WmSensitiveMapper;
 import com.heima.wemedia.service.ChannelService;
+import com.heima.wemedia.service.WmNewsService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +31,9 @@ public class WemediaClient implements IWemediaClient {
 
     @Autowired
     WmSensitiveMapper wmSensitiveMapper;
+
+    @Autowired
+    WmNewsService wmNewsService;
 
     @Override
     public ResponseResult listChannels(ChannePageQuerylDto channePageQuerylDto) {
@@ -99,5 +105,10 @@ public class WemediaClient implements IWemediaClient {
         BeanUtils.copyProperties(sensitiveWordDto, wmSensitiveWord);
         wmSensitiveMapper.updateById(wmSensitiveWord);
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+    @Override
+    public ResponseResult listArticles(@RequestBody  AdminArticlePageDto dto) {
+        return wmNewsService.listArticlesForAdmin(dto);
     }
 }

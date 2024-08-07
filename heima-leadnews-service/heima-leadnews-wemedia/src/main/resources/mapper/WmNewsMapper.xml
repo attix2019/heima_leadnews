@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.heima.wemedia.mapper.WmNewsMapper">
+
+
+<!--    按名称，状态查找，按创建时间倒序 -->
+    <select id="listArticlesForAdmin" resultType="com.heima.model.admin.vos.AdminArticleListItemVo">
+        select  a.*, b.name as `author_name`
+        from wm_news as a left join wm_user as b
+        on a.user_id = b.id
+    <where>
+        <if test=" dto.status != null and dto.status != ''">
+            and a.status = #{dto.status}
+        </if>
+        <if test=" dto.title != null and dto.title != ''">
+             and title  like concat('%', #{dto.title} ,'%')
+        </if>
+    </where>
+        order by created_time desc
+    </select>
+
+</mapper>

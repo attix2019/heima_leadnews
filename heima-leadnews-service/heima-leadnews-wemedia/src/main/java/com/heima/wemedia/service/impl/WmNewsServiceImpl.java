@@ -14,6 +14,8 @@ import com.heima.common.constants.WmNewsMessageConstants;
 import com.heima.common.exception.CustomException;
 import com.heima.common.tess4j.Tess4jClient;
 import com.heima.file.service.FileStorageService;
+import com.heima.model.admin.dtos.AdminArticlePageDto;
+import com.heima.model.admin.vos.AdminArticleListItemVo;
 import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.PageResponseResult;
 import com.heima.model.common.dtos.ResponseResult;
@@ -497,5 +499,15 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
             mockCensorContent(wmNews.getId());
         }
 //        log.info("文章审核---消费任务执行---end---");
+    }
+
+
+    @Override
+    public ResponseResult listArticlesForAdmin(AdminArticlePageDto dto) {
+        Page<AdminArticleListItemVo> page = new Page<>(dto.getPage(), dto.getSize());
+        wmNewsMapper.listArticlesForAdmin(page, dto);
+        ResponseResult responseResult = new PageResponseResult(dto.getPage(),dto.getSize(),(int)page.getTotal());
+        responseResult.setData(page.getRecords());
+        return responseResult;
     }
 }
