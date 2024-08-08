@@ -3,6 +3,7 @@ package com.heima.wemedia.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -15,6 +16,7 @@ import com.heima.common.exception.CustomException;
 import com.heima.common.tess4j.Tess4jClient;
 import com.heima.file.service.FileStorageService;
 import com.heima.model.admin.dtos.AdminArticlePageDto;
+import com.heima.model.admin.dtos.ReviewOpinion;
 import com.heima.model.admin.vos.AdminArticleListItemVo;
 import com.heima.model.article.dtos.ArticleDto;
 import com.heima.model.common.dtos.PageResponseResult;
@@ -287,12 +289,7 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
             wmNews.setReason("审核成功");
             wmNews.setPublishTime(new Date());
             //4.审核成功，调用用户article服务接口
-            ResponseResult responseResult = saveAppArticle(wmNews);
-            if (!responseResult.getCode().equals(200)) {
-                throw new RuntimeException("WmNewsAutoScanServiceImpl-文章审核，保存app端相关文章数据失败");
-            }
-            //回填article_id
-            wmNews.setArticleId((Long) responseResult.getData());
+            requestArticleModuleToPublish(wmNews);
         }
         wmNewsMapper.updateById(wmNews);
     }
@@ -519,5 +516,28 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         WmUser wmUser = wmUserMapper.selectById(wmNews.getUserId());
         adminArticleListItemVo.setAuthorName(wmUser.getName());
         return ResponseResult.okResult(adminArticleListItemVo);
+    }
+
+    public void requestArticleModuleToPublish(WmNews wmNews){
+        ResponseResult responseResult = saveAppArticle(wmNews);
+        if (!responseResult.getCode().equals(200)) {
+            throw new RuntimeException("WmNewsAutoScanServiceImpl-文章审核，保存app端相关文章数据失败");
+        }
+        //回填article_id
+        wmNews.setArticleId((Long) responseResult.getData());
+    }
+
+    @Override
+    @Transactional
+    public void passManualReview(ReviewOpinion reviewOpinion) {
+        WmNews tmp = wmNewsMapper.selectById(reviewOpinion.getId());
+        if(tmp == null){
+            throw new RuntimeException(AppHttpCodeEnum.PARAM_INVALID.getErrorMessage());
+        }
+        tmp.setStatus(WmNews.Status.PUBLISHED.getCode());
+        tmp.setReason("人工审核成功");
+        tmp.setPublishTime(new Date());
+        requestArticleModuleToPublish(tmp);
+        wmNewsMapper.updateById(tmp);
     }
 }

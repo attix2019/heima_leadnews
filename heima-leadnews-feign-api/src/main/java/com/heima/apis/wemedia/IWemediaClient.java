@@ -1,6 +1,7 @@
 package com.heima.apis.wemedia;
 
 import com.heima.model.admin.dtos.AdminArticlePageDto;
+import com.heima.model.admin.dtos.ReviewOpinion;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.wemedia.dtos.ChannePageQuerylDto;
 import com.heima.model.wemedia.dtos.ChannelDto;
@@ -45,4 +46,7 @@ public interface IWemediaClient {
 
     @GetMapping("/api/v1/news/one_vo/{id}")
     ResponseResult getArticleDetailForAdmin(@PathVariable Integer id);
+
+    @PostMapping("/api/v1/news/auth_pass")
+    ResponseResult passReview(@RequestBody ReviewOpinion reviewOpinion);
 }

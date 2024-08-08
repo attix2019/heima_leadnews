@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.heima.apis.wemedia.IWemediaClient;
 import com.heima.model.admin.dtos.AdminArticlePageDto;
+import com.heima.model.admin.dtos.ReviewOpinion;
 import com.heima.model.admin.vos.AdminArticleListItemVo;
 import com.heima.model.common.dtos.ResponseResult;
 import com.heima.model.common.enums.AppHttpCodeEnum;
@@ -119,4 +120,12 @@ public class WemediaClient implements IWemediaClient {
     public ResponseResult getArticleDetailForAdmin(@PathVariable Integer id) {
         return wmNewsService.getArticleDetailForAdmin(id);
     }
+
+    @Override
+    public ResponseResult passReview(@RequestBody ReviewOpinion reviewOpinion) {
+        wmNewsService.passManualReview(reviewOpinion);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
+
 }
