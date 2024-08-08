@@ -25,4 +25,10 @@ public class AdminArticleController {
     public ResponseResult passReview(@RequestBody ReviewOpinion reviewOpinion){
         return wemediaClient.passReview(reviewOpinion);
     }
+
+
+    @PostMapping("/wemedia/api/v1/news/auth_fail")
+    public ResponseResult rejectNewsViaManualReview(@RequestBody ReviewOpinion reviewOpinion){
+        return wemediaClient.rejectNewsViaManualReview(reviewOpinion);
+    }
 }

@@ -49,4 +49,7 @@ public interface IWemediaClient {
 
     @PostMapping("/api/v1/news/auth_pass")
     ResponseResult passReview(@RequestBody ReviewOpinion reviewOpinion);
+
+    @PostMapping("/api/v1/news/auth_fail")
+    ResponseResult rejectNewsViaManualReview(@RequestBody ReviewOpinion reviewOpinion);
 }

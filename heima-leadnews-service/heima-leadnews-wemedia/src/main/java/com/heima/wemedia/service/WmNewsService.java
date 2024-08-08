@@ -28,4 +28,6 @@ public interface WmNewsService extends IService<WmNews> {
     ResponseResult getArticleDetailForAdmin(Integer id);
 
     void passManualReview(ReviewOpinion reviewOpinion);
+
+    void rejectNewsViaManualReview(ReviewOpinion reviewOpinion);
 }

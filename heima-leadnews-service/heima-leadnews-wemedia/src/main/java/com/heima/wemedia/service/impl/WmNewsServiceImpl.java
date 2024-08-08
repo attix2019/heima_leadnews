@@ -540,4 +540,15 @@ public class WmNewsServiceImpl extends ServiceImpl<WmNewsMapper, WmNews> impleme
         requestArticleModuleToPublish(tmp);
         wmNewsMapper.updateById(tmp);
     }
+
+    @Override
+    public void rejectNewsViaManualReview(ReviewOpinion reviewOpinion) {
+        WmNews tmp = wmNewsMapper.selectById(reviewOpinion.getId());
+        if(tmp == null){
+            throw new RuntimeException(AppHttpCodeEnum.PARAM_INVALID.getErrorMessage());
+        }
+        tmp.setStatus(WmNews.Status.FAIL.getCode());
+        tmp.setReason(reviewOpinion.getMsg());
+        wmNewsMapper.updateById(tmp);
+    }
 }

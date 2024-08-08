@@ -127,5 +127,11 @@ public class WemediaClient implements IWemediaClient {
         return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
     }
 
+    @Override
+    public ResponseResult rejectNewsViaManualReview(@RequestBody ReviewOpinion reviewOpinion) {
+        wmNewsService.rejectNewsViaManualReview(reviewOpinion);
+        return ResponseResult.okResult(AppHttpCodeEnum.SUCCESS);
+    }
+
 
 }
